@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>To-Do List</title>
+
+  <style>
+    :root{
+      --bg:#0f1724;
+      --card:#ffffff10;
+      --glass:#ffffff08;
+      --accent:#7c5cff;
+      --accent-2:#22c1c3;
+      --text:#e6eef8;
+      --muted:#9fb0c8;
+      --danger:#ff7b7b;
+      --shadow: 0 8px 30px rgba(2,6,23,0.6);
+      --radius:16px;
+      font-family: Inter, system-ui, sans-serif;
+    }
+
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      min-height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background:linear-gradient(180deg,#071226,#071b2f);
+      color:var(--text);
+      padding:20px;
+    }
+
+    .app{
+      width:100%;
+      max-width:700px;
+      background:linear-gradient(180deg,#ffffff0a,#ffffff05);
+      padding:20px;
+      border-radius:16px;
+      box-shadow:var(--shadow);
+    }
+
+    header{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      margin-bottom:15px;
+    }
+
+    .logo{
+      width:48px;
+      height:48px;
+      border-radius:12px;
+      display:grid;
+      place-items:center;
+      background:linear-gradient(135deg,var(--accent),var(--accent-2));
+      font-weight:bold;
+    }
+
+    h1{margin:0;font-size:18px}
+    .subtitle{margin:0;font-size:12px;color:var(--muted)}
+
+    .add-area{
+      display:flex;
+      gap:10px;
+      margin-bottom:20px;
+    }
+
+    .add-area input{
+      flex:1;
+      padding:12px;
+      border-radius:10px;
+      border:none;
+      outline:none;
+      background:var(--card);
+      color:var(--text);
+    }
+
+    .btn{
+      padding:10px 16px;
+      border-radius:10px;
+      border:none;
+      cursor:pointer;
+      font-weight:600;
+      background:linear-gradient(90deg,var(--accent),var(--accent-2));
+      color:white;
+    }
+
+    .controls{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      margin-bottom:10px;
+      flex-wrap:wrap;
+      gap:10px;
+    }
+
+    .filters button{
+      background:none;
+      border:none;
+      color:var(--muted);
+      cursor:pointer;
+      padding:6px 10px;
+      border-radius:8px;
+      font-weight:600;
+    }
+
+    .filters .active{
+      background:#ffffff12;
+      color:var(--text);
+    }
+
+    ul{list-style:none;padding:0;margin:0}
+
+    li.todo{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      background:#ffffff08;
+      padding:10px;
+      border-radius:10px;
+      margin-bottom:8px;
+    }
+
+    .left{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex:1;
+    }
+
+    .checkbox{
+      width:18px;
+      height:18px;
+      border:2px solid #ffffff40;
+      border-radius:4px;
+      cursor:pointer;
+      display:grid;
+      place-items:center;
+    }
+
+    .checkbox.checked{
+      background:linear-gradient(90deg,var(--accent),var(--accent-2));
+      border:none;
+      color:white;
+    }
+
+    .label.completed{
+      text-decoration:line-through;
+      color:var(--muted);
+    }
+
+    .meta button{
+      background:none;
+      border:none;
+      cursor:pointer;
+      font-size:16px;
+      color:var(--muted);
+    }
+
+    .meta button:hover{color:white}
+
+    .empty{
+      text-align:center;
+      color:var(--muted);
+      padding:20px;
+    }
+
+    .counter{
+      font-size:13px;
+      color:var(--muted);
+    }
+
+    footer{
+      margin-top:15px;
+      text-align:center;
+      font-size:12px;
+      color:var(--muted);
+    }
+
+    @media(max-width:500px){
+      h1{font-size:16px}
+      .logo{width:42px;height:42px}
+    }
+  </style>
+</head>
+
+<body>
+
+  <main class="app">
+    <header>
+      <div class="logo">TD</div>
+      <div>
+        <h1>To-Do</h1>
+        <p class="subtitle">Simple, fast and responsive</p>
+      </div>
+    </header>
+
+    <div class="add-area">
+      <input type="text" id="taskInput" placeholder="Enter new task...">
+      <button class="btn" id="addBtn">Add</button>
+    </div>
+
+    <div class="controls">
+      <div class="filters">
+        <button class="filter active" data-filter="all">All</button>
+        <button class="filter" data-filter="active">Active</button>
+        <button class="filter" data-filter="completed">Completed</button>
+      </div>
+      <div class="counter" id="counter">0 tasks</div>
+    </div>
+
+    <ul id="todoList"></ul>
+    <div class="empty" id="emptyMsg">No tasks yet</div>
+
+    <footer>Data saved automatically in your browser</footer>
+  </main>
+
+  <script>
+    const input = document.getElementById('taskInput');
+    const addBtn = document.getElementById('addBtn');
+    const list = document.getElementById('todoList');
+    const filters = document.querySelectorAll('.filter');
+    const counter = document.getElementById('counter');
+    const emptyMsg = document.getElementById('emptyMsg');
+
+    let tasks = JSON.parse(localStorage.getItem('todos')) || [];
+    let currentFilter = 'all';
+
+    function save(){
+      localStorage.setItem('todos', JSON.stringify(tasks));
+    }
+
+    function render(){
+      list.innerHTML = '';
+      let filtered = tasks.filter(t=>{
+        if(currentFilter==='active') return !t.completed;
+        if(currentFilter==='completed') return t.completed;
+        return true;
+      });
+
+      emptyMsg.style.display = filtered.length ? 'none' : 'block';
+
+      filtered.forEach(task=>{
+        const li = document.createElement('li');
+        li.className = 'todo';
+
+        li.innerHTML = `
+          <div class="left">
+            <div class="checkbox ${task.completed?'checked':''}">${task.completed?'✔':''}</div>
+            <div class="label ${task.completed?'completed':''}">${task.text}</div>
+          </div>
+          <div class="meta">
+            <button class="delete">🗑</button>
+          </div>
+        `;
+
+        li.querySelector('.checkbox').onclick = ()=>{
+          task.completed = !task.completed;
+          save();
+          render();
+        };
+
+        li.querySelector('.delete').onclick = ()=>{
+          tasks = tasks.filter(t=>t.id!==task.id);
+          save();
+          render();
+        };
+
+        list.appendChild(li);
+      });
+
+      counter.textContent = `${tasks.filter(t=>!t.completed).length} active • ${tasks.length} total`;
+    }
+
+    addBtn.onclick = ()=>{
+      if(input.value.trim()==='') return;
+      tasks.push({id:Date.now(), text:input.value, completed:false});
+      input.value='';
+      save();
+      render();
+    };
+
+    input.addEventListener('keydown',e=>{
+      if(e.key==='Enter') addBtn.click();
+    });
+
+    filters.forEach(btn=>{
+      btn.onclick = ()=>{
+        filters.forEach(b=>b.classList.remove('active'));
+        btn.classList.add('active');
+        currentFilter = btn.dataset.filter;
+        render();
+      };
+    });
+
+    render();
+  </script>
+
+</body>
+</html>
